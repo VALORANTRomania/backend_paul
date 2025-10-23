@@ -1,0 +1,19 @@
+# Node / build
+node_modules/
+dist/
+build/
+.cache/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment (NU urcăm chei secrete)
+.env
+.env.*
+
+# OS junk
+Thumbs.db
+.DS_Store
