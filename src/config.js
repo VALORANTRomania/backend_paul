@@ -30,17 +30,44 @@ const EMAIL_TRANSPORT = (process.env.EMAIL_TRANSPORT || 'console').toLowerCase()
 const EMAIL_FROM = process.env.EMAIL_FROM || 'Happyjoybooth <no-reply@happyjoybooth.local>';
 const EMAIL_ADMIN = process.env.EMAIL_ADMIN || 'bizi.ighi@gmail.com';
 
+const SMTP_HOST =
+    process.env.EMAIL_SMTP_HOST ||
+    process.env.SMTP_HOST ||
+    '';
+const SMTP_PORT = Number.parseInt(
+    process.env.EMAIL_SMTP_PORT ||
+        process.env.SMTP_PORT ||
+        (SMTP_HOST ? '587' : '587'),
+    10
+);
+const SMTP_SECURE_VALUE =
+    process.env.EMAIL_SMTP_SECURE ??
+    process.env.SMTP_SECURE ??
+    (SMTP_PORT === 465 ? 'true' : 'false');
+const SMTP_SECURE = String(SMTP_SECURE_VALUE).toLowerCase() === 'true';
+const SMTP_USER = process.env.EMAIL_SMTP_USER || process.env.SMTP_USER;
+const SMTP_PASS = process.env.EMAIL_SMTP_PASS || process.env.SMTP_PASS;
+const SMTP_TLS_REJECT_UNAUTHORIZED_VALUE =
+    process.env.EMAIL_SMTP_TLS_REJECT_UNAUTHORIZED ?? process.env.SMTP_TLS_REJECT_UNAUTHORIZED;
+const SMTP_TLS =
+    SMTP_TLS_REJECT_UNAUTHORIZED_VALUE !== undefined
+        ? {
+              rejectUnauthorized: String(SMTP_TLS_REJECT_UNAUTHORIZED_VALUE).toLowerCase() !== 'false'
+          }
+        : undefined;
+
 const SMTP_CONFIG = {
-    host: process.env.EMAIL_SMTP_HOST || '',
-    port: Number.parseInt(process.env.EMAIL_SMTP_PORT || '587', 10),
-    secure: process.env.EMAIL_SMTP_SECURE === 'true',
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
     auth:
-        process.env.EMAIL_SMTP_USER && process.env.EMAIL_SMTP_PASS
+        SMTP_USER && SMTP_PASS
             ? {
-                  user: process.env.EMAIL_SMTP_USER,
-                  pass: process.env.EMAIL_SMTP_PASS
+                  user: SMTP_USER,
+                  pass: SMTP_PASS
               }
-            : undefined
+            : undefined,
+    tls: SMTP_TLS
 };
 
 module.exports = {

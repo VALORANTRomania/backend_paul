@@ -24,11 +24,15 @@ function resolveTransporter() {
             });
         }
 
-        if (process.env.EMAIL_SMTP_URL) {
-            return nodemailer.createTransport(process.env.EMAIL_SMTP_URL);
+        const directUrl = process.env.EMAIL_SMTP_URL || process.env.SMTP_URL;
+        if (directUrl) {
+            return nodemailer.createTransport(directUrl);
         }
 
         if (SMTP_CONFIG.host) {
+            console.info(
+                `[email] Using SMTP host ${SMTP_CONFIG.host}:${SMTP_CONFIG.port} (secure=${SMTP_CONFIG.secure})`
+            );
             return nodemailer.createTransport({
                 ...SMTP_CONFIG
             });
