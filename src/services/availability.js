@@ -1,9 +1,4 @@
-const {
-    BASE_TIME_SLOTS,
-    MIN_LEAD_DAYS,
-    MAX_DAYS_AHEAD,
-    BLACKOUT_DAY_OFFSETS
-} = require('../config');
+const { BASE_TIME_SLOTS, MIN_LEAD_DAYS, MAX_DAYS_AHEAD } = require('../config');
 const { listBookingsForService } = require('../db');
 
 function addDays(baseDate, days) {
@@ -39,10 +34,6 @@ async function computeAvailability(serviceKey) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const blackoutDates = new Set(
-        BLACKOUT_DAY_OFFSETS.map((offset) => toIsoDate(addDays(today, offset)))
-    );
-
     const rangeStart = addDays(today, MIN_LEAD_DAYS);
     const rangeEnd = addDays(today, MAX_DAYS_AHEAD);
     const startIso = toIsoDate(rangeStart);
@@ -63,10 +54,6 @@ async function computeAvailability(serviceKey) {
     for (let offset = MIN_LEAD_DAYS; offset <= MAX_DAYS_AHEAD; offset += 1) {
         const candidate = addDays(today, offset);
         const iso = toIsoDate(candidate);
-
-        if (blackoutDates.has(iso)) {
-            continue;
-        }
 
         const bookedSlots = bookingMap.get(iso) || new Set();
         const availableSlots = BASE_TIME_SLOTS.filter((slot) => !bookedSlots.has(slot));
