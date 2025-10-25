@@ -19,7 +19,7 @@ const VALID_SERVICES = (process.env.VALID_SERVICES || 'photobooth,platform360,mi
 
 const DATABASE_CLIENT = (process.env.DATABASE_CLIENT || 'sqlite').toLowerCase();
 const DATABASE_PATH = path.join(__dirname, '..', 'data', 'bookings.db');
-const DATABASE_URL = process.env.DATABASE_URL || '';
+const DATABASE_URL = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL || '';
 const DATABASE_SSL = process.env.DATABASE_SSL === 'true';
 
 const APP_BASE_URL = (process.env.APP_BASE_URL || 'http://localhost:4000').replace(/\/$/, '');
