@@ -16,6 +16,9 @@ let initPromise = null;
 
 if (isPostgres) {
     const { Pool } = require('pg');
+    // Log masked URL for debugging
+    const maskedUrl = DATABASE_URL.replace(/:([^:@]{4})[^:@]*@/, ':$1****@');
+    console.log('Connecting to Postgres with URL:', maskedUrl);
     pool = new Pool({
         connectionString: DATABASE_URL,
         ssl: DATABASE_SSL
