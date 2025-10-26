@@ -57,7 +57,8 @@ function initializeSqlite(db) {
             created_at TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'pending',
             confirmation_token TEXT NOT NULL DEFAULT '',
-            confirmed_at TEXT
+            confirmed_at TEXT,
+            calendar_event_id TEXT
         );
     `);
 
@@ -74,7 +75,8 @@ function initializeSqlite(db) {
             name: 'confirmation_token',
             sql: "ALTER TABLE bookings ADD COLUMN confirmation_token TEXT NOT NULL DEFAULT ''"
         },
-        { name: 'confirmed_at', sql: 'ALTER TABLE bookings ADD COLUMN confirmed_at TEXT' }
+        { name: 'confirmed_at', sql: 'ALTER TABLE bookings ADD COLUMN confirmed_at TEXT' },
+        { name: 'calendar_event_id', sql: 'ALTER TABLE bookings ADD COLUMN calendar_event_id TEXT' }
     ];
 
     requiredColumns.forEach((column) => {
@@ -325,11 +327,48 @@ async function confirmBookingByToken(token) {
     return bookingByTokenStmt.get(token);
 }
 
+async function updateBookingCalendarEventId(bookingId, calendarEventId) {
+    await initPromise;
+    if (isPostgres) {
+        const result = await pool.query(
+            `
+                UPDATE bookings
+                SET calendar_event_id = $2
+                WHERE id = $1
+                RETURNING *
+            `,
+            [bookingId, calendarEventId]
+        );
+        return result.rows[0] || null;
+    }
+
+    const updateStmt = sqliteDb.prepare(
+        `
+            UPDATE bookings
+            SET calendar_event_id = @calendarEventId
+            WHERE id = @bookingId
+        `
+    );
+    const selectStmt = sqliteDb.prepare(
+        `
+            SELECT *
+            FROM bookings
+            WHERE id = ?
+        `
+    );
+    const result = updateStmt.run({ bookingId, calendarEventId });
+    if (result.changes === 0) {
+        return null;
+    }
+    return selectStmt.get(bookingId);
+}
+
 module.exports = {
     isPostgres,
     pool,
     insertBooking,
     listBookingsForService,
     getBookingByToken,
-    confirmBookingByToken
+    confirmBookingByToken,
+    updateBookingCalendarEventId
 };

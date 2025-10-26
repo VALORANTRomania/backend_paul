@@ -3,13 +3,19 @@ const cors = require('cors');
 
 const { VALID_SERVICES, PAYMENT_LINK } = require('./config');
 const { bookingSchema } = require('./validators');
-const { insertBooking, getBookingByToken, confirmBookingByToken } = require('./db');
+const {
+    insertBooking,
+    getBookingByToken,
+    confirmBookingByToken,
+    updateBookingCalendarEventId
+} = require('./db');
 const { computeAvailability } = require('./services/availability');
 const {
     sendAdminNewBookingEmail,
     sendClientPendingEmail,
     sendClientConfirmedEmail
 } = require('./services/email');
+const { createCalendarEventForBooking } = require('./services/calendar');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -34,7 +40,8 @@ function mapBookingRecord(record) {
         eventTime: record.event_time,
         createdAt: record.created_at,
         status: record.status,
-        confirmedAt: record.confirmed_at
+        confirmedAt: record.confirmed_at,
+        calendarEventId: record.calendar_event_id || null
     };
 }
 
@@ -169,6 +176,20 @@ app.post('/api/bookings', async (req, res) => {
         return res.status(500).json({
             error: 'Nu am putut salva rezervarea. Te rugam sa incerci din nou.'
         });
+    }
+
+    try {
+        const calendarEventId = await createCalendarEventForBooking(bookingRecord);
+        if (calendarEventId) {
+            const updatedRecord = await updateBookingCalendarEventId(bookingRecord.id, calendarEventId);
+            if (updatedRecord) {
+                bookingRecord = updatedRecord;
+            } else {
+                bookingRecord.calendar_event_id = calendarEventId;
+            }
+        }
+    } catch (error) {
+        console.error('[bookings] calendar sync failed', error);
     }
 
     const availability = await computeAvailability(bookingPayload.serviceKey);
