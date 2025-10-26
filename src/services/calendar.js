@@ -43,13 +43,13 @@ async function getCalendarClient() {
         return null;
     }
 
+    const google = loadGoogleModule();
+    if (!google) {
+        return null;
+    }
+
     if (!calendarClientPromise) {
         calendarClientPromise = (async () => {
-            const google = loadGoogleModule();
-            if (!google) {
-                return null;
-            }
-
             try {
                 const auth = new google.auth.JWT({
                     email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
