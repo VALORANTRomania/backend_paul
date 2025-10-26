@@ -1,4 +1,3 @@
-const { google } = require('googleapis');
 const {
     GOOGLE_CALENDAR_ENABLED,
     GOOGLE_CALENDAR_ID,
@@ -8,10 +7,31 @@ const {
     GOOGLE_SERVICE_ACCOUNT_KEY
 } = require('../config');
 
+let googleModule = null;
+let googleLoadError = null;
 let calendarClientPromise = null;
 
 function isCalendarEnabled() {
     return GOOGLE_CALENDAR_ENABLED;
+}
+
+function loadGoogleModule() {
+    if (googleModule || googleLoadError) {
+        return googleModule;
+    }
+
+    try {
+        const { google } = require('googleapis');
+        googleModule = google;
+        return googleModule;
+    } catch (error) {
+        googleLoadError = error;
+        console.warn(
+            '[calendar] googleapis package not available, skipping calendar integration.',
+            error.message
+        );
+        return null;
+    }
 }
 
 function getEventDurationMinutes() {
@@ -25,6 +45,11 @@ async function getCalendarClient() {
 
     if (!calendarClientPromise) {
         calendarClientPromise = (async () => {
+            const google = loadGoogleModule();
+            if (!google) {
+                return null;
+            }
+
             try {
                 const auth = new google.auth.JWT({
                     email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
