@@ -12,7 +12,8 @@ const BLACKOUT_DAY_OFFSETS = (process.env.BLACKOUT_DAY_OFFSETS || '5,12,19,27,33
     .split(',')
     .map((item) => Number(item.trim()))
     .filter((value) => !Number.isNaN(value));
-const VALID_SERVICES = (process.env.VALID_SERVICES || 'photobooth,platform360,mirrorbooth,aibooth')
+const VALID_SERVICES = (process.env.VALID_SERVICES ||
+    'photobooth,platform360,platforma360,combo,mirrorbooth,oglinda,aibooth,extras')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);

@@ -38,6 +38,31 @@ if (isPostgres) {
     initPromise = Promise.resolve();
 }
 
+function parseExtras(rawExtras) {
+    if (!rawExtras) {
+        return [];
+    }
+    if (Array.isArray(rawExtras)) {
+        return rawExtras;
+    }
+    try {
+        const parsed = JSON.parse(rawExtras);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function normalizeBookingRow(row) {
+    if (!row) {
+        return null;
+    }
+    return {
+        ...row,
+        extras: parseExtras(row.extras)
+    };
+}
+
 function initializeSqlite(db) {
     db.exec(`
         CREATE TABLE IF NOT EXISTS bookings (
@@ -52,6 +77,7 @@ function initializeSqlite(db) {
             guest_count INTEGER,
             event_location TEXT NOT NULL,
             extra_notes TEXT,
+            extras TEXT,
             event_date TEXT NOT NULL,
             event_time TEXT NOT NULL,
             created_at TEXT NOT NULL,
@@ -70,6 +96,7 @@ function initializeSqlite(db) {
     );
 
     const requiredColumns = [
+        { name: 'extras', sql: 'ALTER TABLE bookings ADD COLUMN extras TEXT' },
         { name: 'status', sql: "ALTER TABLE bookings ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'" },
         {
             name: 'confirmation_token',
@@ -113,6 +140,7 @@ async function initializePostgres() {
             guest_count INTEGER,
             event_location TEXT NOT NULL,
             extra_notes TEXT,
+            extras TEXT,
             event_date TEXT NOT NULL,
             event_time TEXT NOT NULL,
             created_at TIMESTAMPTZ NOT NULL,
@@ -131,6 +159,10 @@ async function initializePostgres() {
         CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_token
             ON bookings(confirmation_token);
     `);
+    await pool.query(`
+        ALTER TABLE bookings
+        ADD COLUMN IF NOT EXISTS extras TEXT
+    `);
 }
 
 function withTimestamps(payload) {
@@ -144,8 +176,10 @@ function withTimestamps(payload) {
 async function insertBooking(payload) {
     await initPromise;
     const confirmationToken = payload.confirmationToken || crypto.randomUUID().replace(/-/g, '');
+    const extrasArray = Array.isArray(payload.extras) ? payload.extras : [];
     const preparedPayload = withTimestamps({
         ...payload,
+        extras: JSON.stringify(extrasArray),
         confirmationToken
     });
 
@@ -163,6 +197,7 @@ async function insertBooking(payload) {
                     guest_count,
                     event_location,
                     extra_notes,
+                    extras,
                     event_date,
                     event_time,
                     created_at,
@@ -170,7 +205,7 @@ async function insertBooking(payload) {
                     confirmation_token,
                     confirmed_at
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
                 )
                 RETURNING *
             `,
@@ -185,6 +220,7 @@ async function insertBooking(payload) {
                 preparedPayload.guestCount ?? null,
                 preparedPayload.eventLocation,
                 preparedPayload.extraNotes,
+                preparedPayload.extras,
                 preparedPayload.eventDate,
                 preparedPayload.eventTime,
                 preparedPayload.createdAt,
@@ -193,7 +229,7 @@ async function insertBooking(payload) {
                 preparedPayload.confirmedAt
             ]
         );
-        return result.rows[0];
+        return normalizeBookingRow(result.rows[0]);
     }
 
     const insertBookingStmt = sqliteDb.prepare(`
@@ -208,6 +244,7 @@ async function insertBooking(payload) {
             guest_count,
             event_location,
             extra_notes,
+            extras,
             event_date,
             event_time,
             created_at,
@@ -225,6 +262,7 @@ async function insertBooking(payload) {
             @guestCount,
             @eventLocation,
             @extraNotes,
+            @extras,
             @eventDate,
             @eventTime,
             @createdAt,
@@ -239,7 +277,8 @@ async function insertBooking(payload) {
         WHERE id = ?
     `);
     const info = insertBookingStmt.run(preparedPayload);
-    return bookingByIdStmt.get(info.lastInsertRowid);
+    const row = bookingByIdStmt.get(info.lastInsertRowid);
+    return normalizeBookingRow(row);
 }
 
 async function listBookingsForService(serviceKey, startDate, endDate) {
@@ -279,7 +318,7 @@ async function getBookingByToken(token) {
             `,
             [token]
         );
-        return result.rows[0] || null;
+        return normalizeBookingRow(result.rows[0]);
     }
 
     const bookingByTokenStmt = sqliteDb.prepare(`
@@ -287,7 +326,7 @@ async function getBookingByToken(token) {
         FROM bookings
         WHERE confirmation_token = ?
     `);
-    return bookingByTokenStmt.get(token) || null;
+    return normalizeBookingRow(bookingByTokenStmt.get(token));
 }
 
 async function confirmBookingByToken(token) {
@@ -305,7 +344,7 @@ async function confirmBookingByToken(token) {
             `,
             [confirmedAt, token]
         );
-        return result.rows[0] || null;
+        return normalizeBookingRow(result.rows[0]);
     }
 
     const confirmBookingStmt = sqliteDb.prepare(`
@@ -324,7 +363,7 @@ async function confirmBookingByToken(token) {
     if (result.changes === 0) {
         return null;
     }
-    return bookingByTokenStmt.get(token);
+    return normalizeBookingRow(bookingByTokenStmt.get(token));
 }
 
 async function updateBookingCalendarEventId(bookingId, calendarEventId) {
@@ -339,7 +378,7 @@ async function updateBookingCalendarEventId(bookingId, calendarEventId) {
             `,
             [bookingId, calendarEventId]
         );
-        return result.rows[0] || null;
+        return normalizeBookingRow(result.rows[0]);
     }
 
     const updateStmt = sqliteDb.prepare(
@@ -360,7 +399,7 @@ async function updateBookingCalendarEventId(bookingId, calendarEventId) {
     if (result.changes === 0) {
         return null;
     }
-    return selectStmt.get(bookingId);
+    return normalizeBookingRow(selectStmt.get(bookingId));
 }
 
 module.exports = {

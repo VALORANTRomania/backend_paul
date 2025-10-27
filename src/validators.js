@@ -50,6 +50,34 @@ const bookingSchema = z
             .max(1000, 'Detaliile suplimentare sunt prea lungi.')
             .optional()
             .or(z.literal('')),
+        extras: z
+            .array(
+                z.object({
+                    id: z
+                        .string()
+                        .trim()
+                        .min(1, 'Selectia extra nu este valida.'),
+                    label: z
+                        .string()
+                        .trim()
+                        .min(1, 'Numele serviciului extra este obligatoriu.')
+                        .max(150),
+                    price: z
+                        .string()
+                        .trim()
+                        .max(60)
+                        .optional()
+                        .or(z.literal('')),
+                    description: z
+                        .string()
+                        .trim()
+                        .max(240)
+                        .optional()
+                        .or(z.literal(''))
+                })
+            )
+            .max(8, 'Poti selecta cel mult 8 servicii extra.')
+            .optional(),
         eventDate: z
             .string({ required_error: 'Data evenimentului este obligatorie.' })
             .regex(/^\d{4}-\d{2}-\d{2}$/, 'Format data invalid (YYYY-MM-DD).'),
@@ -61,7 +89,18 @@ const bookingSchema = z
     })
     .transform((data) => ({
         ...data,
-        extraNotes: data.extraNotes || ''
+        extraNotes: data.extraNotes || '',
+        extras: Array.isArray(data.extras)
+            ? data.extras.map((extra) => {
+                  const normalize = (value) => (typeof value === 'string' ? value.trim() : '');
+                  return {
+                      id: extra.id.trim(),
+                      label: extra.label.trim(),
+                      price: normalize(extra.price),
+                      description: normalize(extra.description)
+                  };
+              })
+            : []
     }));
 
 module.exports = {

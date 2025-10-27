@@ -36,6 +36,7 @@ function mapBookingRecord(record) {
         guestCount: record.guest_count,
         eventLocation: record.event_location,
         extraNotes: record.extra_notes,
+        extras: Array.isArray(record.extras) ? record.extras : [],
         eventDate: record.event_date,
         eventTime: record.event_time,
         createdAt: record.created_at,

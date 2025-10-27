@@ -87,6 +87,12 @@ function formatDate(isoDate) {
 }
 
 function formatBookingDetails(booking) {
+    const extrasList =
+        Array.isArray(booking.extras) && booking.extras.length
+            ? booking.extras
+                  .map((extra) => `${extra.label}${extra.price ? ` (${extra.price})` : ''}`)
+                  .join(', ')
+            : '-';
     return `
         <ul>
             <li><strong>Serviciu:</strong> ${booking.service_key}</li>
@@ -97,6 +103,7 @@ function formatBookingDetails(booking) {
             <li><strong>Eveniment:</strong> ${booking.event_type || '-'}</li>
             <li><strong>Nr. invitati:</strong> ${booking.guest_count ?? '-'}</li>
             <li><strong>Locatie:</strong> ${booking.event_location}</li>
+            <li><strong>Servicii extra:</strong> ${extrasList}</li>
         </ul>
         ${
             booking.extra_notes
@@ -113,6 +120,12 @@ function buildConfirmUrl(token) {
 async function sendAdminNewBookingEmail(booking) {
     const confirmUrl = buildConfirmUrl(booking.confirmation_token);
     const subject = `[Rezervare noua] ${booking.client_name} - ${booking.event_date} ${booking.event_time}`;
+    const extrasText =
+        Array.isArray(booking.extras) && booking.extras.length
+            ? booking.extras
+                  .map((extra) => `${extra.label}${extra.price ? ` (${extra.price})` : ''}`)
+                  .join(', ')
+            : '-';
     const html = `
         <p>Salut! Ai o noua cerere de rezervare.</p>
         ${formatBookingDetails(booking)}
@@ -130,6 +143,7 @@ async function sendAdminNewBookingEmail(booking) {
         `Eveniment: ${booking.event_type || '-'}`,
         `Nr. invitati: ${booking.guest_count ?? '-'}`,
         `Locatie: ${booking.event_location}`,
+        `Servicii extra: ${extrasText}`,
         `Detalii suplimentare: ${booking.extra_notes || '-'}`,
         '',
         `Confirma rezervarea: ${confirmUrl}`
@@ -151,7 +165,7 @@ async function sendClientPendingEmail(booking) {
             booking.event_date
         )}</strong>, interval <strong>${booking.event_time}</strong>, a fost inregistrata.</p>
         <p>Echipa noastra verifica disponibilitatea completa si revine cu confirmarea in cel mult 12 ore.</p>
-        <p>Daca ai intrebari urgente, ne poti scrie pe <a href="mailto:hello@happyjoybooth.ro">hello@happyjoybooth.ro</a> sau suna la <a href="tel:+40733456789">+40 733 456 789</a>.</p>
+        <p>Daca ai intrebari urgente, ne poti scrie pe <a href="mailto:booking@happyjoybooth.ro">booking@happyjoybooth.ro</a> sau suna la <a href="tel:+40764155220">0764 155 220</a>.</p>
         <p>Cu energie,<br>Echipa Happyjoybooth</p>
     `;
     const text = [
@@ -159,7 +173,7 @@ async function sendClientPendingEmail(booking) {
         'Iti multumim ca ai ales Happyjoybooth.',
         `Cererea ta pentru ${formatDate(booking.event_date)}, interval ${booking.event_time}, a fost inregistrata.`,
         'Echipa noastra verifica disponibilitatea completa si revine cu confirmarea in cel mult 12 ore.',
-        'Intrebari? hello@happyjoybooth.ro sau +40 733 456 789.',
+        'Intrebari? booking@happyjoybooth.ro sau 0764 155 220.',
         '',
         'Cu energie,',
         'Echipa Happyjoybooth'
@@ -182,7 +196,7 @@ async function sendClientConfirmedEmail(booking) {
         )}</strong>, interval <strong>${booking.event_time}</strong>, este blocata pentru tine.</p>
         <p>Pentru a securiza data, te rugam sa accesezi linkul de plata a avansului:</p>
         <p><a href="${PAYMENT_LINK}">Plateste avansul Happyjoybooth</a></p>
-        <p>Daca ai nevoie de ajutor, raspunde direct la acest email sau contacteaza-ne la <a href="tel:+40733456789">+40 733 456 789</a>.</p>
+        <p>Daca ai nevoie de ajutor, raspunde direct la acest email sau contacteaza-ne la <a href="tel:+40764155220">0764 155 220</a>.</p>
         <p>Multumim si abia asteptam sa cream amintiri faine impreuna!<br>Echipa Happyjoybooth</p>
     `;
     const text = [
@@ -190,7 +204,7 @@ async function sendClientConfirmedEmail(booking) {
         'Rezervarea ta a fost confirmata.',
         `Data: ${formatDate(booking.event_date)} | Interval: ${booking.event_time}`,
         `Plateste avansul: ${PAYMENT_LINK}`,
-        'Ai intrebari? Raspunde la acest email sau suna la +40 733 456 789.',
+        'Ai intrebari? Raspunde la acest email sau suna la 0764 155 220.',
         '',
         'Echipa Happyjoybooth'
     ].join('\n');
