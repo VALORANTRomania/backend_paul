@@ -90,12 +90,19 @@ function buildDateTime(dateIso, time, offsetMinutes = 0) {
 
 function buildEventPayload(booking) {
     const eventTime = (booking.event_time || '').trim();
-    const summary = `[${booking.service_key}] ${booking.client_name} @ ${eventTime || 'TBA'}`;
+    const extras = Array.isArray(booking.extras) ? booking.extras : [];
+    const extrasNames = extras
+        .map((extra) => extra?.label || extra?.name || extra?.id)
+        .filter(Boolean);
+    const packageLabel = booking.package_name || booking.package_id || 'Pachet';
+    const extrasLabel = extrasNames.length ? ` + ${extrasNames.join(', ')}` : '';
+    const summary = `[${booking.service_key}] ${packageLabel}${extrasLabel} - ${booking.client_name}`;
     const descriptionLines = [
         `Client: ${booking.client_name}`,
         `Email: ${booking.client_email}`,
         `Telefon: ${booking.client_phone}`,
         `Pachet: ${booking.package_name || booking.package_id}`,
+        extrasNames.length ? `Servicii extra: ${extrasNames.join(', ')}` : 'Servicii extra: -',
         `Eveniment: ${booking.event_type || '-'}`,
         `Nr. invitati: ${booking.guest_count ?? '-'}`,
         `Locatie: ${booking.event_location}`,
